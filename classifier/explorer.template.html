@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earth Waltz · Flood Explorer</title>
+<style>
+:root{color-scheme:dark;--bg:#101715;--panel:#19231e;--line:#35463d;--text:#edf3ea;--muted:#afbeb3;--accent:#8aefc8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px system-ui,sans-serif}
+main{max-width:1210px;padding:35px clamp(16px,4vw,60px);margin:auto}
+header{border-top:1px solid var(--line);padding:18px 0 22px}
+.eyebrow,.caption{font:12px ui-monospace,monospace;text-transform:uppercase;letter-spacing:.13em;color:var(--accent)}
+h1{margin:4px 0 8px;font:normal clamp(45px,7vw,84px)/1 Georgia,serif;letter-spacing:-.05em}
+h2{font-size:14px;margin:0 0 8px}p{line-height:1.45;margin:0;color:var(--muted)}
+.banner{background:#28271d;border:1px solid #51452f;padding:10px 14px;margin-bottom:16px;font-size:14px;color:#eadcc9}.banner strong{color:#ffcf84;margin-right:10px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 275px;gap:15px;align-items:start}
+.frame,.panel{background:var(--panel);border:1px solid var(--line);min-width:0}
+.frame-head,.legend{display:flex;gap:10px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 15px}
+.legend{justify-content:flex-start}.frame-head output,.legend,.secondary{color:var(--muted);font-size:13px}
+.canvas-area{position:relative;background:#080e0b}
+canvas{width:100%;height:auto;display:block;cursor:crosshair}
+.swipe{position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--text);pointer-events:none}
+.key{width:11px;height:11px;display:inline-block;margin-right:6px;vertical-align:-1px}
+aside{display:grid;gap:10px}.panel{padding:13px}
+label,legend{display:block;font-size:13px;font-weight:650;margin-bottom:7px}
+select{width:100%;padding:8px;background:#141e19;color:var(--text);border:1px solid var(--line);font:inherit}
+fieldset{display:grid;grid-template-columns:repeat(2,1fr);margin:0;padding:0;border:0;gap:6px}
+button{padding:7px 4px;border:1px solid var(--line);background:#141e19;color:var(--text);font:600 13px system-ui;cursor:pointer}
+button[aria-pressed=true]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+input[type=range]{width:100%;margin:2px 0 0;accent-color:var(--accent)}
+.control{margin-top:13px}.ends{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted)}
+.area{font:31px Georgia,serif;color:var(--accent);margin:4px 0}
+footer{margin-top:16px;font-size:13px}a{color:var(--accent);text-underline-offset:3px}
+[hidden]{display:none!important}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:790px){.layout{grid-template-columns:1fr}aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){main{padding-top:18px}aside{grid-template-columns:1fr}}
+</style>
+<main>
+<header><div class="eyebrow">Radar change detection</div><h1>Earth Waltz</h1>
+<p>Compare radar acquisitions and explore where new open water appeared.</p></header>
+<div id="banner" class="banner" hidden><strong>Synthetic demonstration</strong> Simulated radar and flood labels. NISAR training and evaluation are pending.</div>
+<div class="layout">
+<section class="frame" aria-label="Radar scene">
+<div class="frame-head"><strong id="title"></strong><output id="dates"></output></div>
+<div class="canvas-area"><canvas id="map" role="img" aria-label="Radar scene and predicted flood extent"></canvas><div id="divider" class="swipe" hidden></div></div>
+<div id="legend" class="legend"></div>
+</section>
+<aside aria-label="Scene controls and results">
+<div class="panel"><label for="scene">Scene</label><select id="scene"></select><p id="position" class="secondary" style="margin-top:7px"></p></div>
+<div class="panel">
+<fieldset id="modes"><legend>View</legend>
+<button type="button" data-mode="before">Before</button><button type="button" data-mode="after">After</button>
+<button type="button" data-mode="compare">Swipe</button><button type="button" data-mode="flood">Flood extent</button>
+</fieldset>
+<div id="swipe-control" class="control" hidden>
+<label for="swipe">Before / after divider</label><input id="swipe" type="range" min="0" max="100" value="50">
+<div class="ends"><span>After only</span><span>Before only</span></div>
+</div>
+<div class="control">
+<label for="threshold">Score threshold · <output id="threshold-value"></output></label>
+<input id="threshold" type="range" min=".05" max=".95" step=".01">
+<div class="ends"><span>More detections</span><span>Fewer detections</span></div>
+</div>
+</div>
+<div class="panel" aria-live="polite"><div class="caption">Estimated new open water</div><div id="area" class="area"></div><p id="stats" class="secondary"></p></div>
+<div class="panel"><h2>Pixel inspection</h2><p id="pixel" class="secondary">Move over the scene to inspect a radar pixel.</p></div>
+</aside>
+</div>
+<footer><p id="evaluation"></p><p><a href="https://nisar-docs.asf.alaska.edu/gcov/">NISAR GCOV product guide</a></p></footer>
+</main>
+<script>
+"use strict";
+const {scenes, model} = /* DATA */;
+const el = id => document.getElementById(id);
+const map = el("map");
+const ctx = map.getContext("2d");
+const threshold = el("threshold");
+const swipe = el("swipe");
+const selector = el("scene");
+const swatch = (color, label) => '<span><i class="key" style="background:' + color + '"></i>' + label + '</span>';
+let mode = "flood";
+let scene, rasters, image;
+let queued = false;
+let lastPixel = null;
+const decode = encoded => Uint8Array.from(atob(encoded), char => char.charCodeAt(0));
+el("banner").hidden = !model.synthetic;
+threshold.value = model.threshold;
+for (const [i, item] of scenes.entries()) selector.add(new Option(item.title, i));
+const results = model.evaluation.test;
+const pct = value => Math.round(value * 100) + "%";
+el("evaluation").textContent = (model.synthetic ? "Held-out simulations" : "Held-out events") +
+  " · " + model.evaluation.events.test + " · IoU " + pct(results.iou) +
+  " · precision " + pct(results.precision) + " · recall " + pct(results.recall) +
+  ". Scores are model outputs.";
+
+function selection() {
+  const cutoff = Number(threshold.value);
+  return cutoff === model.threshold
+    ? i => rasters.decision[i] === 254
+    : i => rasters.score[i] !== 255 && rasters.score[i] / 254 >= cutoff;
+}
+
+function render() {
+  queued = false;
+  const divider = Math.round(scene.width * Number(swipe.value) / 100);
+  const selected = selection();
+  let floodCount = 0;
+  let validCount = 0;
+  for (let i = 0; i < rasters.score.length; i++) {
+    const missing = rasters.score[i] === 255;
+    const useBefore = mode === "before" || (mode === "compare" && i % scene.width < divider);
+    const gray = Math.round(20 + (useBefore ? rasters.before[i] : rasters.after[i]) * .84);
+    const flooded = selected(i);
+    const tint = mode === "flood" && flooded;
+    const offset = i * 4;
+    image.data[offset] = missing ? 11 : tint ? 42 : gray;
+    image.data[offset + 1] = missing ? 24 : tint ? 169 + gray * .29 : gray;
+    image.data[offset + 2] = missing ? 18 : tint ? 146 + gray * .26 : gray;
+    image.data[offset + 3] = 255;
+    validCount += !missing;
+    floodCount += flooded;
+  }
+  ctx.putImageData(image, 0, 0);
+  el("divider").style.left = swipe.value + "%";
+  el("threshold-value").textContent = Number(threshold.value).toFixed(2);
+  el("area").textContent = (floodCount * scene.pixel_km2).toLocaleString(undefined, {
+    maximumFractionDigits: 3
+  }) + " km²";
+  el("stats").textContent = (100 * floodCount / validCount).toFixed(1) +
+    "% of valid coverage · " + floodCount.toLocaleString() + " flagged pixels";
+  if (lastPixel !== null) inspect(lastPixel);
+}
+
+function inspect(i) {
+  if (rasters.score[i] === 255) {
+    el("pixel").textContent = "Missing radar coverage";
+    return;
+  }
+  const hh = val => val === 0 ? "≤ −32" : val === 254 ? "≥ −2" : (val * 30 / 254 - 32).toFixed(1);
+  el("pixel").textContent = "HH before " + hh(rasters.before[i]) + " dB · after " +
+    hh(rasters.after[i]) + " dB · score " + (rasters.score[i] / 254).toFixed(2) +
+    (selection()(i) ? " · flagged" : "");
+}
+
+function schedule() {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(render);
+}
+
+function chooseMode(nextMode) {
+  mode = nextMode;
+  document.querySelectorAll("[data-mode]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
+  });
+  el("swipe-control").hidden = el("divider").hidden = mode !== "compare";
+  const radar = {before: "Before", after: "After", compare: "Before / after", flood: "After"};
+  el("legend").innerHTML = swatch("#9ba5a1", radar[mode] + " · HH backscatter") +
+    (mode === "flood" ? swatch("#4cddbf", "Predicted new open water") : "") +
+    swatch("#0b1812", "Missing radar coverage");
+  schedule();
+}
+
+function chooseScene() {
+  scene = scenes[Number(selector.value)];
+  rasters = Object.fromEntries(["before", "after", "score", "decision"].map(key =>
+    [key, decode(scene[key])]));
+  map.width = scene.width;
+  map.height = scene.height;
+  image = ctx.createImageData(map.width, map.height);
+  el("title").textContent = scene.title;
+  el("dates").textContent = (model.synthetic ? "Example dates · " : "") +
+    scene.before_date + " → " + scene.after_date;
+  el("position").textContent = scene.center ? "Scene center · " +
+    scene.center.map(value => value.toFixed(4) + "°").join(", ") :
+    "Simulated scene · 20 m pixel spacing";
+  lastPixel = null;
+  el("pixel").textContent = "Move over the scene to inspect a radar pixel.";
+  schedule();
+}
+
+selector.addEventListener("change", chooseScene);
+el("modes").addEventListener("click", event => {
+  if (event.target.dataset.mode) chooseMode(event.target.dataset.mode);
+});
+threshold.addEventListener("input", () => {
+  if (mode !== "flood") chooseMode("flood");
+  schedule();
+});
+swipe.addEventListener("input", schedule);
+map.addEventListener("pointermove", event => {
+  const box = map.getBoundingClientRect();
+  const col = Math.floor((event.clientX - box.left) / box.width * scene.width);
+  const row = Math.floor((event.clientY - box.top) / box.height * scene.height);
+  if (col < 0 || row < 0 || col >= scene.width || row >= scene.height) return;
+  lastPixel = row * scene.width + col;
+  inspect(lastPixel);
+});
+chooseScene();
+chooseMode("flood");
+</script>
+</html>

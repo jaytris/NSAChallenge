@@ -1,0 +1,27 @@
+{
+  "region": {
+    "id": "mississippi",
+    "name": "Mississippi River Delta",
+    "place": "Louisiana, USA",
+    "theme": "Wetland loss and flooding",
+    "bbox": [-90.4, 28.95, -89.2, 29.85],
+    "nx": 64,
+    "ny": 64,
+    "dispCap": 6,
+    "primary": "water"
+  },
+  "scenes": [
+    {"date": "2025-11-04", "granule": "NISAR_L2_PR_GCOV_...", "HH": "gcov/2025-11-04_HHHH.tif", "HV": "gcov/2025-11-04_HVHV.tif"},
+    {"date": "2025-11-16", "granule": "NISAR_L2_PR_GCOV_...", "HH": "gcov/2025-11-16_HHHH.tif", "HV": "gcov/2025-11-16_HVHV.tif"},
+    {"date": "2025-12-10", "granule": "NISAR_L2_PR_GCOV_...", "HH": "gcov/2025-12-10_HHHH.tif", "HV": "gcov/2025-12-10_HVHV.tif"}
+  ],
+  "interferograms": [
+    {"ref": "2025-11-04", "sec": "2025-12-10", "unw": "gunw/20251104_20251210_unw.tif"}
+  ],
+  "static": {
+    "pop": "aux/worldpop_2025_1km.tif",
+    "landuse": "aux/esa_worldcover_remapped.tif",
+    "roadDist": "aux/osm_road_distance_km.tif"
+  },
+  "rain_mm": [110, 125, 140]
+}

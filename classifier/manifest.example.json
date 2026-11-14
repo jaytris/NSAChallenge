@@ -1,0 +1,41 @@
+[
+  {
+    "id": "example-event-1-chip-01",
+    "event": "example-event-1",
+    "title": "Example event 1",
+    "split": "train",
+    "before_date": "2026-10-23",
+    "after_date": "2026-11-04",
+    "before_hh": "example-event-1/before-HHHH.tif",
+    "before_hv": "example-event-1/before-HVHV.tif",
+    "after_hh": "example-event-1/after-HHHH.tif",
+    "after_hv": "example-event-1/after-HVHV.tif",
+    "label": "example-event-1/new-open-water.tif"
+  },
+  {
+    "id": "example-event-2-chip-01",
+    "event": "example-event-2",
+    "title": "Example event 2",
+    "split": "validation",
+    "before_date": "2026-10-23",
+    "after_date": "2026-11-04",
+    "before_hh": "example-event-2/before-HHHH.tif",
+    "before_hv": "example-event-2/before-HVHV.tif",
+    "after_hh": "example-event-2/after-HHHH.tif",
+    "after_hv": "example-event-2/after-HVHV.tif",
+    "label": "example-event-2/new-open-water.tif"
+  },
+  {
+    "id": "example-event-3-chip-01",
+    "event": "example-event-3",
+    "title": "Example event 3",
+    "split": "test",
+    "before_date": "2026-10-23",
+    "after_date": "2026-11-04",
+    "before_hh": "example-event-3/before-HHHH.tif",
+    "before_hv": "example-event-3/before-HVHV.tif",
+    "after_hh": "example-event-3/after-HHHH.tif",
+    "after_hv": "example-event-3/after-HVHV.tif",
+    "label": "example-event-3/new-open-water.tif"
+  }
+]

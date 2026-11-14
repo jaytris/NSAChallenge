@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAR Atlas - NISAR surface change explorer</title>
+<meta name="description" content="Interactive explorer for NISAR radar surface change: floods, deforestation, subsidence. Simulated demo data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Widgets/widgets.css">
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Cesium.js" onerror="window.CESIUM_FAILED=true"></script>
+<!--CSS-->
+<link rel="stylesheet" href="css/ui.css">
+<!--/CSS-->
+<script>
+  /* Real data switch: point this at a folder of preprocess/ output (requires serving over http). */
+  window.SAR = { config: { realDataBase: null } };
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a6 6 0 0 1 6-6h8M15 3l3 3-3 3M20 12a6 6 0 0 1-6 6H6M9 21l-3-3 3-3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 4l9 5-9 5-9-5z"/><path d="M3 14l9 5 9-5"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M12 3v18"/></symbol>
+    <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.8.3 5 2.7 5 5.8"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 15l4-4 3 3 5-6"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><circle cx="7" cy="16" r="1.4"/><circle cx="11" cy="11" r="1.4"/><circle cx="15" cy="13" r="1.4"/><circle cx="18" cy="7" r="1.4"/><path d="M4 20L20 4" stroke-dasharray="2 2.5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5c3-1.5 5.5-1.5 8 .5 2.5-2 5-2 8-.5v14c-3-1.5-5.5-1.5-8 .5-2.5-2-5-2-8-.5z"/><path d="M12 5.5V20"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M10 9.5l5 2.5-5 2.5z" fill="currentColor"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></symbol>
+    <symbol id="i-poly" viewBox="0 0 24 24"><path d="M5 7l7-3 7 5-2 9H7z"/><circle cx="5" cy="7" r="1.3" fill="currentColor"/><circle cx="12" cy="4" r="1.3" fill="currentColor"/><circle cx="19" cy="9" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A1.6 1.6 0 0 0 6 21h12a1.6 1.6 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/></symbol>
+    <symbol id="i-radar" viewBox="0 0 24 24"><path d="M12 12L19 5"/><path d="M19.5 12A7.5 7.5 0 1 1 12 4.5"/><path d="M16 12a4 4 0 1 1-4-4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.2v.3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.5 3.8 5.3 3.8 8.5s-1.2 6-3.8 8.5c-2.6-2.5-3.8-5.3-3.8-8.5S9.4 6 12 3.5z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1"/><path d="M16 8V4H4v12h4"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#leftPanel">Skip to controls</a>
+
+<header class="topbar" role="banner">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".35"/>
+      <path d="M20 3a17 17 0 0 1 17 17" fill="none" stroke="#f2a541" stroke-width="2.2"/>
+      <path d="M20 9a11 11 0 0 1 11 11" fill="none" stroke="#f2a541" stroke-width="1.6" opacity=".7"/>
+      <path d="M20 15a5 5 0 0 1 5 5" fill="none" stroke="#f2a541" stroke-width="1.4" opacity=".5"/>
+      <path d="M20 20L33 7" stroke="#e7ecf2" stroke-width="1.2"/>
+      <rect x="17.5" y="17.5" width="5" height="5" transform="rotate(45 20 20)" fill="#e7ecf2"/>
+    </svg>
+    <div class="brand-text"><div class="brand-name">SAR ATLAS</div><div class="brand-sub">NISAR surface change explorer</div></div>
+  </div>
+
+  <div class="top-center">
+    <form class="search" id="searchForm" role="search">
+      <svg class="ic"><use href="#i-search"/></svg>
+      <label for="regionSearch" class="sr-only">Search a region or type latitude, longitude</label>
+      <input id="regionSearch" list="regionOptions" autocomplete="off" placeholder="Search region or lat, lon" data-tip="Type a region name, or coordinates like 29.4, -89.8 to fly anywhere">
+      <datalist id="regionOptions"></datalist>
+    </form>
+    <div class="readout" aria-live="polite"><span class="lbl">Acquisition</span><span id="topDate" class="mono val">----</span></div>
+    <div class="readout hide-sm"><span class="lbl">Sensor</span><span class="mono val">NISAR L-band</span></div>
+  </div>
+
+  <div class="top-right">
+    <span class="sim-badge" tabindex="0" data-tip="Every value is produced by a seeded synthetic generator that mimics radar physics. Not real observations."><svg class="ic"><use href="#i-alert"/></svg>SIMULATED DEMO DATA</span>
+    <div class="seg mode-seg" role="group" aria-label="Interface mode">
+      <button id="modeExplorer" aria-pressed="true" data-tip="Plain-language view for everyone">Explorer</button>
+      <button id="modeResearcher" aria-pressed="false" data-tip="Thresholds, band math, ROI statistics, scenarios and exports (R)"><svg class="ic"><use href="#i-flask"/></svg>Researcher</button>
+    </div>
+    <button class="btn ghost" id="btnStory" data-tip="Auto-play a narrated 75-second tour of this region"><svg class="ic"><use href="#i-film"/></svg><span class="hide-sm">Story</span></button>
+    <button class="btn ghost icon-only" id="btnAbout" aria-label="About, methods and data sources" data-tip="About, methods, data sources"><svg class="ic"><use href="#i-book"/></svg></button>
+    <button class="btn ghost icon-only" id="btnSettings" aria-label="Settings" aria-expanded="false" data-tip="Basemap, motion, narration"><svg class="ic"><use href="#i-gear"/></svg></button>
+  </div>
+</header>
+
+<main class="stage">
+  <div id="globe" class="globe" aria-label="3D globe. Click a cell to inspect it." role="application"></div>
+  <div class="globe-vignette" aria-hidden="true"></div>
+
+  <!-- swipe handle for compare mode -->
+  <div id="swipe" class="swipe" hidden>
+    <div class="swipe-line"></div>
+    <button class="swipe-knob" id="swipeKnob" aria-label="Drag to compare dates. Use arrow keys to move." role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><svg class="ic"><use href="#i-chev-l"/></svg><svg class="ic"><use href="#i-chev-r"/></svg></button>
+    <div class="swipe-tag left mono" id="swipeTagA">A</div>
+    <div class="swipe-tag right mono" id="swipeTagB">B</div>
+  </div>
+
+  <div class="map-tools">
+    <button class="tool" id="zoomIn" aria-label="Zoom in" data-tip="Zoom in"><svg class="ic"><use href="#i-plus"/></svg></button>
+    <button class="tool" id="zoomOut" aria-label="Zoom out" data-tip="Zoom out"><svg class="ic"><use href="#i-minus"/></svg></button>
+    <button class="tool" id="zoomRegion" aria-label="Fly to current region" data-tip="Frame current region"><svg class="ic"><use href="#i-target"/></svg></button>
+    <button class="tool" id="zoomWorld" aria-label="Show whole globe" data-tip="Whole globe"><svg class="ic"><use href="#i-home"/></svg></button>
+  </div>
+  <div class="coord mono" id="coordReadout" aria-hidden="true">--</div>
+  <div class="engine-tag mono" id="engineTag"></div>
+
+  <!-- LEFT PANEL -->
+  <aside class="panel left" id="leftPanel" aria-label="Controls">
+    <button class="collapse" id="collapseLeft" aria-label="Collapse controls" aria-expanded="true"><svg class="ic"><use href="#i-chev-l"/></svg></button>
+    <div class="panel-scroll">
+      <section class="sec" aria-labelledby="h-regions">
+        <h2 class="sec-h" id="h-regions"><span>Showcase regions</span><span class="count mono">03</span></h2>
+        <div id="regionList" class="region-list" role="list"></div>
+      </section>
+
+      <section class="sec" id="layerSection" aria-labelledby="h-layer">
+        <h2 class="sec-h" id="h-layer"><svg class="ic"><use href="#i-layers"/></svg><span>Change layer</span></h2>
+        <div id="layerList" class="layer-list" role="radiogroup" aria-label="Change layer"></div>
+        <div class="row">
+          <span class="lbl" id="polLbl" data-tip="Radar polarization: HH and VV are co-polarized, HV is cross-polarized (vegetation)">Polarization</span>
+          <div class="seg small" role="group" aria-labelledby="polLbl" id="polSeg">
+            <button data-pol="HH" aria-pressed="false">HH</button><button data-pol="HV" aria-pressed="true">HV</button><button data-pol="VV" aria-pressed="false">VV</button>
+          </div>
+        </div>
+        <label class="row slider-row"><span class="lbl">Opacity</span><input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.85"><output class="mono" id="opacityOut">85%</output></label>
+        <div id="legend" class="legend" aria-live="polite"></div>
+      </section>
+
+      <section class="sec" id="overlaySection" aria-labelledby="h-ov">
+        <h2 class="sec-h" id="h-ov"><svg class="ic"><use href="#i-people"/></svg><span>Human activity</span><span class="tag">synthetic</span></h2>
+        <div class="toggles">
+          <label class="toggle" data-tip="Land use classes: farmland, pasture, urban, industrial, protected"><input type="checkbox" id="ovLanduse"><span class="sw"></span>Land use / farmland</label>
+          <label class="toggle" data-tip="People per km2, log scale"><input type="checkbox" id="ovPop"><span class="sw"></span>Population density</label>
+          <label class="toggle" data-tip="Roads, canals and built-up area at the current date"><input type="checkbox" id="ovRoads"><span class="sw"></span>Roads / urban growth</label>
+        </div>
+        <label class="row slider-row"><span class="lbl">Overlay</span><input type="range" id="ovOpacity" min="0.1" max="1" step="0.05" value="0.55"><output class="mono" id="ovOpacityOut">55%</output></label>
+        <div id="ovLegend" class="ov-legend"></div>
+      </section>
+
+      <section class="sec" id="compareSection" aria-labelledby="h-cmp">
+        <h2 class="sec-h" id="h-cmp"><svg class="ic"><use href="#i-compare"/></svg><span>Compare dates</span>
+          <label class="toggle mini"><input type="checkbox" id="cmpOn" aria-label="Compare mode"><span class="sw"></span></label></h2>
+        <div id="cmpBody" class="cmp-body">
+          <div class="seg small full" role="group" aria-label="Compare view">
+            <button data-cmp="swipe" aria-pressed="true">Swipe</button><button data-cmp="side" aria-pressed="false">Side by side</button>
+          </div>
+          <div class="two">
+            <label><span class="lbl">Date A</span><select id="cmpA"></select></label>
+            <label><span class="lbl">Date B</span><select id="cmpB"></select></label>
+          </div>
+          <div id="cmpStats" class="stats-card"></div>
+        </div>
+      </section>
+
+      <section class="sec researcher-only" id="researchSection" aria-labelledby="h-res">
+        <h2 class="sec-h" id="h-res"><svg class="ic"><use href="#i-flask"/></svg><span>Researcher tools</span></h2>
+
+        <div class="sub-h">Change detection</div>
+        <label class="row slider-row" data-tip="Minimum dB difference counted as change. Should exceed speckle (about 1.5 dB)."><span class="lbl">Threshold</span><input type="range" id="thr" min="0.5" max="10" step="0.5" value="3"><output class="mono" id="thrOut">3.0 dB</output></label>
+        <label class="row"><span class="lbl">Reference</span><select id="refDate" aria-label="Reference date for change layers"></select></label>
+
+        <div class="sub-h">Band math</div>
+        <div class="expr">
+          <input id="expr" class="mono" value="HV - HH" aria-label="Band math expression" spellcheck="false">
+          <button class="btn small" id="exprApply">Apply</button>
+        </div>
+        <div class="chips" id="exprChips">
+          <button class="chip" data-expr="HV - HH">HV - HH</button>
+          <button class="chip" data-expr="lin(HV) / lin(HH)">lin(HV)/lin(HH)</button>
+          <button class="chip" data-expr="HH - VV">HH - VV</button>
+          <button class="chip" data-expr="db(lin(HH) + lin(HV) + lin(VV))">total power</button>
+        </div>
+        <div class="hint small" id="exprMsg">Variables: HH HV VV (dB), water, disp, rain, pop. Functions: lin db abs sqrt log10 exp min max.</div>
+
+        <div class="sub-h">Region of interest</div>
+        <div class="btn-row">
+          <button class="btn small" id="roiDraw"><svg class="ic"><use href="#i-poly"/></svg>Draw</button>
+          <button class="btn small" id="roiFinish" disabled>Finish</button>
+          <button class="btn small ghost" id="roiClear" disabled>Clear</button>
+        </div>
+        <div id="roiStats" class="stats-card"><div class="empty small">Click Draw, then click points on the globe. Double-click or Finish to close the polygon.</div></div>
+
+        <div class="sub-h">Scenario simulation</div>
+        <label class="row slider-row" data-tip="Changes rainfall in forecast months; effect estimated from the historical rain-to-target regression"><span class="lbl">Rainfall</span><input type="range" id="scRain" min="-50" max="50" step="5" value="0"><output class="mono" id="scRainOut">+0%</output></label>
+        <label class="row slider-row" data-tip="Scales the forecast rate of wetland loss, deforestation or urban conversion"><span class="lbl">Land change</span><input type="range" id="scDefor" min="-80" max="100" step="10" value="0"><output class="mono" id="scDeforOut">+0%</output></label>
+        <label class="row slider-row" data-tip="Scales the forecast subsidence rate, assuming it is proportional to groundwater extraction"><span class="lbl">Pumping</span><input type="range" id="scPump" min="-80" max="100" step="10" value="0"><output class="mono" id="scPumpOut">+0%</output></label>
+
+        <div class="sub-h">Export</div>
+        <div class="export-grid">
+          <button class="btn small" id="exCsv"><svg class="ic"><use href="#i-download"/></svg>CSV</button>
+          <button class="btn small" id="exGeo"><svg class="ic"><use href="#i-download"/></svg>GeoJSON</button>
+          <button class="btn small" id="exPng"><svg class="ic"><use href="#i-download"/></svg>PNG</button>
+          <button class="btn small" id="exRecipe"><svg class="ic"><use href="#i-download"/></svg>Recipe</button>
+          <label class="btn small ghost file-btn"><svg class="ic"><use href="#i-upload"/></svg>Load recipe<input type="file" id="recipeFile" accept="application/json,.json" hidden></label>
+          <button class="btn small ghost" id="copyLog"><svg class="ic"><use href="#i-copy"/></svg>Copy log</button>
+        </div>
+        <div class="sub-h">Operation log</div>
+        <ol id="opLog" class="op-log mono" aria-live="polite"></ol>
+      </section>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <aside class="panel right" id="rightPanel" aria-label="Insights">
+    <button class="collapse" id="collapseRight" aria-label="Collapse insights" aria-expanded="true"><svg class="ic"><use href="#i-chev-r"/></svg></button>
+    <div class="tabs" role="tablist" aria-label="Insight panels">
+      <button role="tab" id="tab-inspect" data-tab="inspect" aria-selected="true"><svg class="ic"><use href="#i-target"/></svg><span>Inspect</span></button>
+      <button role="tab" id="tab-forecast" data-tab="forecast" aria-selected="false"><svg class="ic"><use href="#i-chart"/></svg><span>Forecast</span></button>
+      <button role="tab" id="tab-correlate" data-tab="correlate" aria-selected="false"><svg class="ic"><use href="#i-link"/></svg><span>Correlate</span></button>
+      <button role="tab" id="tab-impact" data-tab="impact" aria-selected="false"><svg class="ic"><use href="#i-people"/></svg><span>Impact</span></button>
+      <button role="tab" id="tab-explain" data-tab="explain" aria-selected="false"><svg class="ic"><use href="#i-info"/></svg><span>Explain</span></button>
+    </div>
+    <div class="panel-scroll" id="tabBody" role="tabpanel" tabindex="0"></div>
+  </aside>
+
+  <!-- side-by-side compare sheet -->
+  <section id="compareSheet" class="compare-sheet" hidden aria-label="Side by side comparison">
+    <div class="cs-head"><span class="sec-h"><svg class="ic"><use href="#i-compare"/></svg><span id="csTitle">Side by side</span></span><button class="btn ghost icon-only" id="csClose" aria-label="Close side by side"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="cs-grid">
+      <figure><figcaption class="mono" id="csA">A</figcaption><div class="cs-canvas" id="csCanA"></div></figure>
+      <figure><figcaption class="mono" id="csB">B</figcaption><div class="cs-canvas" id="csCanB"></div></figure>
+      <figure><figcaption class="mono">Difference B - A</figcaption><div class="cs-canvas" id="csCanD"></div><div class="legend-bar" id="csDiffBar"></div><div class="legend-ends mono small"><span>loss</span><span>no change</span><span>gain</span></div></figure>
+    </div>
+  </section>
+
+  <!-- story captions -->
+  <div id="story" class="story" hidden role="region" aria-label="Guided story">
+    <div class="story-top"><span class="mono story-step" id="storyStep">01 / 08</span><span class="story-title" id="storyTitle"></span>
+      <button class="btn ghost small" id="storyPause"><svg class="ic"><use href="#i-pause"/></svg><span>Pause</span></button>
+      <button class="btn ghost small" id="storyExit"><svg class="ic"><use href="#i-x"/></svg><span>Exit</span></button></div>
+    <p id="storyCap" class="story-cap" aria-live="polite"></p>
+    <div class="story-prog"><div id="storyBar"></div></div>
+  </div>
+
+  <!-- BOTTOM DOCK -->
+  <footer class="dock" id="dock" aria-label="Timeline">
+    <div class="dock-controls">
+      <button class="tbtn" id="stepBack" aria-label="Previous month" data-tip="Previous month (Left)"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button class="tbtn play" id="playBtn" aria-label="Play" data-tip="Play / pause (Space)"><svg class="ic" id="playIcon"><use href="#i-play"/></svg></button>
+      <button class="tbtn" id="stepFwd" aria-label="Next month" data-tip="Next month (Right)"><svg class="ic"><use href="#i-next"/></svg></button>
+      <button class="tbtn" id="loopBtn" aria-pressed="true" aria-label="Loop playback" data-tip="Loop"><svg class="ic"><use href="#i-loop"/></svg></button>
+      <label class="speed"><span class="sr-only">Playback speed</span><select id="speed" aria-label="Playback speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select></label>
+    </div>
+    <div class="dock-track">
+      <div class="dock-meta"><span class="mono dim" id="dockStart"></span><span class="dock-metric mono" id="dockMetric"></span><span class="mono dim" id="dockEnd"></span></div>
+      <div class="spark" id="dockSpark" aria-hidden="true"></div>
+      <input type="range" id="timeSlider" min="0" max="29" step="1" value="0" aria-label="Time step">
+      <div class="ticks mono" id="dockTicks" aria-hidden="true"></div>
+    </div>
+    <div class="dock-date"><div class="lbl">Date</div><div class="big mono" id="dockDate">----</div><div class="mono dim small" id="dockIdx"></div></div>
+  </footer>
+</main>
+
+<!-- dialogs and floating UI -->
+<div id="settingsPop" class="popover" hidden role="dialog" aria-label="Settings">
+  <label class="row"><span class="lbl">Basemap</span><select id="basemap"></select></label>
+  <label class="toggle"><input type="checkbox" id="reducedMotion"><span class="sw"></span>Reduce motion</label>
+  <label class="toggle"><input type="checkbox" id="narrate"><span class="sw"></span>Voice narration in story mode</label>
+  <button class="btn small ghost" id="replayOnboard">Replay introduction</button>
+</div>
+
+<div id="aboutModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="modal-card">
+    <div class="modal-head"><h2 id="aboutTitle">About SAR Atlas</h2><div class="seg small" role="tablist"><button data-about="about" aria-pressed="true">About</button><button data-about="limits" aria-pressed="false">Limitations</button></div><button class="btn ghost icon-only" id="aboutClose" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="modal-body" id="aboutBody"></div>
+  </div>
+</div>
+
+<div id="onboard" class="onboard" hidden role="dialog" aria-modal="true" aria-labelledby="obTitle">
+  <div class="ob-spot" id="obSpot"></div>
+  <div class="ob-card" id="obCard">
+    <div class="mono dim small" id="obStep">STEP 1 / 4</div>
+    <h3 id="obTitle"></h3><p id="obText"></p>
+    <div class="ob-actions"><button class="btn ghost small" id="obSkip">Skip</button><button class="btn small primary" id="obNext">Next</button></div>
+  </div>
+</div>
+
+<div id="loading" class="loading" role="status" aria-live="polite"><div class="spinner"></div><div class="mono" id="loadingText">Starting globe</div></div>
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<!--JS-->
+<script src="js/data.js"></script>
+<script src="js/models.js"></script>
+<script src="js/render.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/content.js"></script>
+<script src="js/globe.js"></script>
+<script src="js/app.js"></script>
+<!--/JS-->
+</body>
+</html>
